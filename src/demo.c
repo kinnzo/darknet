@@ -86,7 +86,6 @@ void *detect_in_thread(void *ptr)
 {
     running = 1;
     float nms = .4;
-
     layer l = net->layers[net->n-1];
     float *X = buff_letter[(buff_index+2)%3].data;
     network_predict(net, X);
@@ -129,7 +128,9 @@ void *detect_in_thread(void *ptr)
     printf("\nFPS:%.1f\n",fps);
     printf("Objects:\n\n");
     image display = buff[(buff_index+2) % 3];
-    draw_detections(display, dets, nboxes, demo_thresh, demo_names, demo_alphabet, demo_classes);
+    int count = *((int *) ptr);
+    free(ptr);
+    draw_detecti(display, dets, nboxes, demo_thresh, demo_names, demo_alphabet, demo_classes,count);
     free_detections(dets, nboxes);
 
     demo_index = (demo_index + 1)%demo_frame;
@@ -235,7 +236,9 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
     while(!demo_done){
         buff_index = (buff_index + 1) %3;
         if(pthread_create(&fetch_thread, 0, fetch_in_thread, 0)) error("Thread creation failed");
-        if(pthread_create(&detect_thread, 0, detect_in_thread, 0)) error("Thread creation failed");
+	int *arg = malloc(sizeof(*arg));
+	*arg = count;
+        if(pthread_create(&detect_thread, 0, detect_in_thread, arg)) error("Thread creation failed");
         if(!prefix){
             fps = 1./(what_time_is_it_now() - demo_time);
             demo_time = what_time_is_it_now();

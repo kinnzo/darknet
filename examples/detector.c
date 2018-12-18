@@ -601,9 +601,12 @@ void test_detector(char *datacfg, char *cfgfile, char *weightfile, char *filenam
         //printf("%d\n", nboxes);
         //if (nms) do_nms_obj(boxes, probs, l.w*l.h*l.n, l.classes, nms);
         if (nms) do_nms_sort(dets, nboxes, l.classes, nms);
+	//printf("\nShould I start drawing detections?\n");
         draw_detections(im, dets, nboxes, thresh, names, alphabet, l.classes);
+	//printf("\nShould I free detections now?\n");
         free_detections(dets, nboxes);
         if(outfile){
+	    //printf("\nShould I save your image now\n");
             save_image(im, outfile);
         }
         else{

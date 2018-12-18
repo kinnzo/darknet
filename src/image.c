@@ -238,8 +238,13 @@ image **load_alphabet()
 
 void draw_detections(image im, detection *dets, int num, float thresh, char **names, image **alphabet, int classes)
 {
+    //FILE *fptr;
+    //fptr = fopen("reslt.csv","w");
     int i,j;
-
+    int ctr = 0;
+    //printf("\nEnter number of spaces available: ");
+    //int max;
+    //scanf("%d",&max);
     for(i = 0; i < num; ++i){
         char labelstr[4096] = {0};
         int class = -1;
@@ -248,11 +253,17 @@ void draw_detections(image im, detection *dets, int num, float thresh, char **na
                 if (class < 0) {
                     strcat(labelstr, names[j]);
                     class = j;
-                } else {
+                } 
+		else {
                     strcat(labelstr, ", ");
                     strcat(labelstr, names[j]);
                 }
+		if(strcmp(names[j],"bicycle")==0 || strcmp(names[j],"car")==0 || strcmp(names[j],"motorbike")==0 || strcmp(names[j],"truck")==0 || strcmp(names[j],"bus")==0) {
+			ctr++;
                 printf("%s: %.0f%%\n", names[j], dets[i].prob[j]*100);
+		//box b = dets[i].bbox;
+		//fprintf(fptr,"%f,%f,%f,%f\n",b.x,b.y,b.w,b.h);
+		}
             }
         }
         if(class >= 0){
@@ -307,7 +318,98 @@ void draw_detections(image im, detection *dets, int num, float thresh, char **na
             }
         }
     }
+    //printf("\nNumber of vehicles = %d\n",ctr);
+    //printf("Number of available slots = %d\n",(max-ctr));
+    //fclose(fptr);
 }
+
+void draw_detecti(image im, detection *dets, int num, float thresh, char **names, image **alphabet, int classes,int count)
+{
+    FILE *fptr;
+    fptr = fopen("reslt.csv","a");
+    int i,j;
+    int ctr = 0;
+    //printf("\nEnter number of spaces available: ");
+    //scanf("%d",&max);
+    for(i = 0; i < num; ++i){
+        char labelstr[4096] = {0};
+        int class = -1;
+        for(j = 0; j < classes; ++j){
+            if (dets[i].prob[j] > thresh){
+                if (class < 0) {
+                    strcat(labelstr, names[j]);
+                    class = j;
+                } 
+		else {
+                    strcat(labelstr, ", ");
+                    strcat(labelstr, names[j]);
+                }
+		if(strcmp(names[j],"bicycle")==0 || strcmp(names[j],"car")==0 || strcmp(names[j],"motorbike")==0 || strcmp(names[j],"truck")==0 || strcmp(names[j],"bus")==0) {
+			ctr++;
+                printf("%s: %.0f%%\n", names[j], dets[i].prob[j]*100);
+		box b = dets[i].bbox;
+			printf("Writing to the file\n");
+		fprintf(fptr,"%d,%f,%f,%f,%f\n",count,b.x,b.y,b.w,b.h);
+		}
+            }
+        }
+        if(class >= 0){
+            int width = im.h * .006;
+
+            /*
+               if(0){
+               width = pow(prob, 1./2.)*10+1;
+               alphabet = 0;
+               }
+             */
+
+            //printf("%d %s: %.0f%%\n", i, names[class], prob*100);
+            int offset = class*123457 % classes;
+            float red = get_color(2,offset,classes);
+            float green = get_color(1,offset,classes);
+            float blue = get_color(0,offset,classes);
+            float rgb[3];
+
+            //width = prob*20+2;
+
+            rgb[0] = red;
+            rgb[1] = green;
+            rgb[2] = blue;
+            box b = dets[i].bbox;
+            //printf("%f %f %f %f\n", b.x, b.y, b.w, b.h);
+
+            int left  = (b.x-b.w/2.)*im.w;
+            int right = (b.x+b.w/2.)*im.w;
+            int top   = (b.y-b.h/2.)*im.h;
+            int bot   = (b.y+b.h/2.)*im.h;
+
+            if(left < 0) left = 0;
+            if(right > im.w-1) right = im.w-1;
+            if(top < 0) top = 0;
+            if(bot > im.h-1) bot = im.h-1;
+
+            draw_box_width(im, left, top, right, bot, width, red, green, blue);
+            if (alphabet) {
+                image label = get_label(alphabet, labelstr, (im.h*.03));
+                draw_label(im, top + width, left, label, rgb);
+                free_image(label);
+            }
+            if (dets[i].mask){
+                image mask = float_to_image(14, 14, 1, dets[i].mask);
+                image resized_mask = resize_image(mask, b.w*im.w, b.h*im.h);
+                image tmask = threshold_image(resized_mask, .5);
+                embed_image(tmask, im, left, top);
+                free_image(mask);
+                free_image(resized_mask);
+                free_image(tmask);
+            }
+        }
+    }
+    //printf("\nNumber of vehicles = %d\n",ctr);
+    //printf("Number of available slots = %d\n",(max-ctr));
+    fclose(fptr);
+}
+
 
 void transpose_image(image im)
 {
